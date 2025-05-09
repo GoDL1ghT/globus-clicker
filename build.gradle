@@ -1,0 +1,38 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '2.1.20'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'ru.godl1ght'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+    implementation "com.github.kwhat:jnativehook:2.2.2"
+    implementation "net.java.dev.jna:jna-platform:5.13.0"
+}
+
+application {
+    mainClass = 'ru.godl1ght.MainKt'
+}
+
+kotlin {
+    jvmToolchain(8)
+}
+
+shadowJar {
+    archiveBaseName.set('globus-clicker')
+    archiveClassifier.set('')
+    archiveVersion.set('1.0')
+
+    manifest {
+        attributes 'Main-Class': 'ru.godl1ght.MainKt'
+    }
+}
+
+build.dependsOn shadowJar
