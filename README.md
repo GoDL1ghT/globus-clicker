@@ -36,6 +36,6 @@
 ### 🔧 Сборка
 
 ```bash
-git clone https://github.com/yourname/globus-clicker.git
+git clone https://github.com/GoDL1ghT/globus-clicker.git
 cd globus-clicker
 .\gradlew shadowJar
