@@ -2,6 +2,8 @@ package ru.godl1ght.clicker
 
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinUser
+import ru.godl1ght.clicker.WindowManager.clickAt
+import ru.godl1ght.clicker.WindowManager.findWindowByTitle
 import kotlin.concurrent.thread
 
 object Clicker {
@@ -17,12 +19,13 @@ object Clicker {
         running = true
 
         thread {
-            val hwnd = WindowFinder.findWindowByTitle(windowTitle)
+            val hwnd = findWindowByTitle(windowTitle)
             while (running) {
                 User32.INSTANCE.ShowWindow(hwnd, WinUser.SW_SHOW)
                 User32.INSTANCE.SetForegroundWindow(hwnd)
+
                 Thread.sleep((1000 / cps).toLong())
-                WindowFinder.clickAt(hwnd, clickX, clickY)
+                clickAt(hwnd, clickX, clickY)
             }
         }
     }
