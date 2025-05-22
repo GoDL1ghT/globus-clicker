@@ -55,7 +55,7 @@ object WindowManager {
             bindButton.text = when {
                 Config.bindKeyCode != -1 -> "Bind Key: ${KeyEvent.getKeyText(Config.bindKeyCode)}"
                 Config.bindMouseButton != null -> "Bind Mouse: Mouse ${Config.bindMouseButton}"
-                else -> "Bind Key (Default: R)"
+                else -> "Assign a key or mouse button"
             }
 
             bindButton.addActionListener {

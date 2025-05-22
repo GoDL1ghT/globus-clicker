@@ -7,9 +7,12 @@ import ru.godl1ght.clicker.WindowManager.findWindowByTitle
 import kotlin.concurrent.thread
 
 object Clicker {
-    @Volatile var running = false
-    @Volatile var cps = 10
-    @Volatile var windowTitle: String = "VimeWorld"
+    @Volatile
+    var running = false
+    @Volatile
+    var cps = 10
+    @Volatile
+    var windowTitle: String = "VimeWorld"
     private const val clickX = 250
     private const val clickY = 325
 
