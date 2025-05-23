@@ -3,11 +3,11 @@ package ru.godl1ght.clicker
 import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef
-import java.awt.GridLayout
-import java.awt.KeyboardFocusManager
+import java.awt.*
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.net.URI
 import javax.swing.*
 
 object WindowManager {
@@ -16,6 +16,10 @@ object WindowManager {
     private lateinit var windowTitleField: JTextField
     private lateinit var bindButton: JButton
     private lateinit var statusLabel: JLabel
+
+    private lateinit var activationModeBox: JComboBox<String>
+    private lateinit var mouseButtonBox: JComboBox<String>
+
     private var waitingForBind = false
 
     fun launch() {
@@ -23,35 +27,100 @@ object WindowManager {
         SwingUtilities.invokeLater {
             frame = JFrame("Globus Clicker")
             frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-            frame.setSize(320, 220)
-            frame.layout = GridLayout(5, 1)
+            frame.minimumSize = Dimension(420, 460)
+            frame.setSize(420, 460)
+            frame.layout = BorderLayout()
 
-            val cpsPanel = JPanel()
+            val configPanel = JPanel()
+            configPanel.layout = BoxLayout(configPanel, BoxLayout.Y_AXIS)
+
+            val cpsPanel = JPanel(FlowLayout(FlowLayout.LEFT))
+            cpsPanel.border = BorderFactory.createTitledBorder("Clicks Per Second")
             cpsPanel.add(JLabel("CPS:"))
             cpsField = JTextField(5)
             cpsPanel.add(cpsField)
-            frame.add(cpsPanel)
+            val incButton = JButton("+").apply {
+                addActionListener {
+                    cpsField.text = ((cpsField.text.toIntOrNull() ?: 0) + 1).coerceAtMost(100).toString()
+                }
+            }
+            val decButton = JButton("-").apply {
+                addActionListener {
+                    cpsField.text = ((cpsField.text.toIntOrNull() ?: 0) - 1).coerceAtLeast(1).toString()
+                }
+            }
+            cpsPanel.add(incButton)
+            cpsPanel.add(decButton)
 
-            val windowPanel = JPanel()
-            windowPanel.add(JLabel("Window Title:"))
-            windowTitleField = JTextField(10)
+            val windowPanel = JPanel(FlowLayout(FlowLayout.LEFT))
+            windowPanel.border = BorderFactory.createTitledBorder("Target Window")
+            windowPanel.add(JLabel("Title:"))
+            windowTitleField = JTextField(15)
             windowPanel.add(windowTitleField)
-            frame.add(windowPanel)
 
+            val bindPanel = JPanel(FlowLayout(FlowLayout.LEFT))
+            bindPanel.border = BorderFactory.createTitledBorder("Activation Key")
             bindButton = JButton()
-            frame.add(bindButton)
+            bindPanel.add(bindButton)
 
+            val modePanel = JPanel(FlowLayout(FlowLayout.LEFT))
+            modePanel.border = BorderFactory.createTitledBorder("Activation Mode")
+            activationModeBox = JComboBox(arrayOf("toggle", "hold"))
+            modePanel.add(activationModeBox)
+
+            val mousePanel = JPanel(FlowLayout(FlowLayout.LEFT))
+            mousePanel.border = BorderFactory.createTitledBorder("Mouse Button")
+            mouseButtonBox = JComboBox(arrayOf("LMB", "RMB"))
+            mousePanel.add(mouseButtonBox)
+
+            val resetPanel = JPanel(FlowLayout(FlowLayout.CENTER))
+            val resetButton = JButton("Reset Settings").apply {
+                addActionListener {
+                    cpsField.text = "15"
+                    windowTitleField.text = "Example"
+                    activationModeBox.selectedItem = "toggle"
+                    mouseButtonBox.selectedItem = "LMB"
+                    Config.reset()
+                    bindButton.text = "Assign a key or mouse button"
+                }
+            }
+            resetPanel.add(resetButton)
+
+            configPanel.add(cpsPanel)
+            configPanel.add(windowPanel)
+            configPanel.add(bindPanel)
+            configPanel.add(modePanel)
+            configPanel.add(mousePanel)
+            configPanel.add(resetPanel)
+
+            val bottomPanel = JPanel(BorderLayout())
             val toggleButton = JButton("Toggle Clicker")
-            frame.add(toggleButton)
 
+            bottomPanel.add(toggleButton, BorderLayout.CENTER)
             statusLabel = JLabel("Status: OFF", SwingConstants.CENTER)
-            frame.add(statusLabel)
+            statusLabel.preferredSize = Dimension(400, 40)
+            statusLabel.maximumSize = Dimension(Short.MAX_VALUE.toInt(), 40)
+            bottomPanel.add(statusLabel)
+
+            val linkPanel = JPanel(FlowLayout(FlowLayout.CENTER))
+            val github = createLinkLabel("GitHub", "https://github.com/GoDL1ghT")
+            val telegram = createLinkLabel("Telegram", "https://t.me/god1ik")
+
+            linkPanel.add(github)
+            linkPanel.add(telegram)
+
+            val southPanel = JPanel()
+            southPanel.layout = BoxLayout(southPanel, BoxLayout.Y_AXIS)
+            southPanel.add(bottomPanel)
+            southPanel.add(linkPanel)
 
             //////////////////////////////////////////////////////////
 
             Config.load()
             cpsField.text = Config.cps.toString()
             windowTitleField.text = Config.windowTitle
+            activationModeBox.selectedItem = Config.activationMode
+            mouseButtonBox.selectedItem = Config.mouseButton
             bindButton.text = when {
                 Config.bindKeyCode != -1 -> "Bind Key: ${KeyEvent.getKeyText(Config.bindKeyCode)}"
                 Config.bindMouseButton != null -> "Bind Mouse: Mouse ${Config.bindMouseButton}"
@@ -104,8 +173,25 @@ object WindowManager {
 
             HotkeyManager.setBindKeyCode(Config.bindKeyCode)
             HotkeyManager.setBindMouseButton(Config.bindMouseButton)
-            HotkeyManager.registerHotkey { toggleClicker() }
+            HotkeyManager.registerHotkey(
+                toggle = { toggleClicker() },
+                holdStart = {
+                    if (activationModeBox.selectedItem == "hold") {
+                        Clicker.startClicking()
+                        statusLabel.text = "Status: ON"
+                    } else
+                        toggleClicker()
+                },
+                holdStop = {
+                    if (activationModeBox.selectedItem == "hold") {
+                        Clicker.stopClicking()
+                        statusLabel.text = "Status: OFF"
+                    }
+                }
+            )
 
+            frame.add(configPanel, BorderLayout.CENTER)
+            frame.add(southPanel, BorderLayout.SOUTH)
             frame.isVisible = true
         }
     }
@@ -146,10 +232,14 @@ object WindowManager {
     private fun toggleClicker() {
         val cps = cpsField.text.toIntOrNull()
         val title = windowTitleField.text.trim()
+        val mode = activationModeBox.selectedItem.toString()
+        val mouseButton = mouseButtonBox.selectedItem.toString()
 
         if (cps != null && cps in 1..100 && title.isNotEmpty()) {
             Config.cps = cps
             Config.windowTitle = title
+            Config.activationMode = mode
+            Config.mouseButton = mouseButton
             Config.save()
 
             Clicker.cps = cps
@@ -188,6 +278,24 @@ object WindowManager {
     fun applyMouseBind(button: Int) {
         bindButton.text = "Bind Mouse: Mouse $button"
         waitingForBind = false
+    }
+
+    private fun createLinkLabel(text: String, url: String): JLabel {
+        val label = JLabel("<html><a href=''>$text</a></html>")
+
+        label.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        label.toolTipText = url
+
+        label.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                try {
+                    Desktop.getDesktop().browse(URI(url))
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                }
+            }
+        })
+        return label
     }
 
 }

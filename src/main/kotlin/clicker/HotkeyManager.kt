@@ -13,27 +13,37 @@ import java.util.logging.Logger
 
 object HotkeyManager {
     private var toggleCallback: (() -> Unit)? = null
+    private var holdCallbackStart: (() -> Unit)? = null
+    private var holdCallbackStop: (() -> Unit)? = null
 
-    fun registerHotkey(callback: () -> Unit) {
-        this.toggleCallback = callback
+    fun registerHotkey(toggle: () -> Unit, holdStart: () -> Unit, holdStop: () -> Unit) {
+        toggleCallback = toggle
+        holdCallbackStart = holdStart
+        holdCallbackStop = holdStop
+
         Logger.getLogger(GlobalScreen::class.java.`package`.name).level = Level.OFF
         GlobalScreen.registerNativeHook()
 
         GlobalScreen.addNativeKeyListener(object : NativeKeyListener {
             override fun nativeKeyPressed(e: NativeKeyEvent) {
                 if (bindKeyCode != -1 && e.keyCode == bindKeyCode && !isActiveWindow())
-                    toggleCallback?.invoke()
+                    if (Config.activationMode == "hold") holdCallbackStart?.invoke()
+                    else toggleCallback?.invoke()
             }
 
-            override fun nativeKeyReleased(e: NativeKeyEvent) {}
+            override fun nativeKeyReleased(e: NativeKeyEvent) {
+                if (bindKeyCode != -1 && e.keyCode == bindKeyCode && !isActiveWindow())
+                    if (Config.activationMode == "hold") holdCallbackStop?.invoke()
+            }
+
             override fun nativeKeyTyped(e: NativeKeyEvent) {}
         })
 
         GlobalScreen.addNativeMouseListener(object : NativeMouseListener {
             override fun nativeMousePressed(e: NativeMouseEvent) {
                 if (WindowManager.isWaitingForBind()) {
-                    Config.bindKeyCode = -1
-                    Config.bindMouseButton = e.button
+                    bindKeyCode = -1
+                    bindMouseButton = e.button
 
                     setBindKeyCode(-1)
                     setBindMouseButton(e.button)
@@ -46,10 +56,15 @@ object HotkeyManager {
                 }
 
                 if (bindMouseButton != null && e.button == bindMouseButton && !isActiveWindow())
-                    toggleCallback?.invoke()
+                    if (Config.activationMode == "hold") holdCallbackStart?.invoke()
+                    else toggleCallback?.invoke()
             }
 
-            override fun nativeMouseReleased(e: NativeMouseEvent) {}
+            override fun nativeMouseReleased(e: NativeMouseEvent) {
+                if (bindMouseButton != null && e.button == bindMouseButton && !isActiveWindow())
+                    if (Config.activationMode == "hold") holdCallbackStop?.invoke()
+            }
+
             override fun nativeMouseClicked(e: NativeMouseEvent) {}
         })
     }
@@ -66,8 +81,5 @@ object HotkeyManager {
     fun setBindMouseButton(button: Int?) {
         bindMouseButton = button
     }
-
-    fun getBindKeyText(): Int = bindKeyCode
-    fun getBindMouseText(): Int? = bindMouseButton
 
 }
