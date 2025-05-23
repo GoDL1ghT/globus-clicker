@@ -28,7 +28,7 @@ object Config {
         activationMode = props.getProperty("activationMode") ?: activationMode
         mouseButton = props.getProperty("mouseButton") ?: mouseButton
         bindKeyCode = props.getProperty("bindKeyCode")?.toIntOrNull() ?: -1
-        bindMouseButton = props.getProperty("bindMouseCode")?.toIntOrNull()
+        bindMouseButton = props.getProperty("bindMouseButton")?.toIntOrNull()
     }
 
     fun save() {
